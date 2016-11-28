@@ -1,30 +1,11 @@
 <?php
 
-require 'vendor/autoload.php';
-
-// https://www.cscpro.org/secura/battle/3485.json
-// https://secura.e-sim.org/apiFights.html?battleId=1&roundId=15
-
-$server = isset($argv[1]) ? $argv[1] : 'secura';
-
-$final = isset($argv[2]) ? intval($argv[2]) : 33000;
-
-$indexPath = __DIR__."/{$server}/battles/index";
+require __DIR__.'/boot.php';
 
 $client = new GuzzleHttp\Client();
 
 do {
-    $index = intval(trim(file_get_contents($indexPath)));
-
-    if (isset($argv[3])) {
-        $index = intval($argv[3]);
-
-        unset($argv[3]);
-    }
-
-    file_put_contents($indexPath, $index + 1, LOCK_EX);
-
-    echo "Fetching {$server} {$index}...".PHP_EOL;
+    $climate->out("Fetching {$server} {$index}...");
 
     $tries = 0;
 
@@ -53,21 +34,20 @@ download:
 
         file_put_contents("{$outputPath}0", json_encode($battle));
     } catch (\Exception $e) {
-        echo $e->getMessage().PHP_EOL;
+        $climate->to('error')->red($e->getMessage());
 
         if (++$tries > 10) {
-            echo "Fail to fetch {$server} {$index} after 10 times, give up.".PHP_EOL;
+            $climate->to('error')->red("Fail to fetch {$server} {$index} after 10 times, give up.");
 
             exit(1);
         }
         
         sleep(5);
 
-        echo "Refetching {$server} {$index}...".PHP_EOL;
+        $climate->yellow("Refetching {$server} {$index}...");
 
         goto download;
     }
 
     sleep(3);
-} while ($index++ < $final);
-
+} while (++$index < $endAt);

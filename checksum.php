@@ -1,41 +1,17 @@
 <?php
 
-function files($path) {
-    $handle = opendir($path);
+define('NO_INDEX', true);
 
-    if (false === $handle) {
-        echo "Error: {$path}".PHP_EOL;
+require_once __DIR__.'/boot.php';
 
-        exit(1);
-    }
+$filesystem = new Illuminate\Filesystem\Filesystem;
 
-    $files = [];
-
-    while (false !== ($entry = readdir($handle))) {
-        if (! in_array($entry, ['.', '..', 'index'], true)) {
-            $files[] = $entry;
-        }
-    }
-
-    closedir($handle);
-
-    return $files;
-}
-
-$server = isset($argv[1]) ? $argv[1] : 'secura';
-
-$path = __DIR__."/{$server}/battles";
-
-foreach (files($path) as $entry) {
-    foreach (files("{$path}/{$entry}") as $index) {
-        $info = json_decode(file_get_contents("{$path}/{$entry}/{$index}/0"), true);
+foreach ($filesystem->directories(__DIR__."/{$server}/battles") as $directory) {
+    foreach ($filesystem->directories($directory) as $battle) {
+        $info = json_decode(file_get_contents("{$battle}/0"), true);
 
         if (! isset($info['round'])) {
-            if (isset($argv[2])) {
-                shell_exec("php battle.php {$server} {$index} {$index}");
-            } else {
-                echo 'Fail: '.$index.PHP_EOL;
-            }
+            $climate->to('error')->red('Fail: '.$battle);
 
             continue;
         }
@@ -43,10 +19,10 @@ foreach (files($path) as $entry) {
         for ($i = 1; $i <= $info['round']; ++$i) {
             $passed = true;
 
-            if (! is_file("{$path}/{$entry}/{$index}/{$i}")) {
+            if (! $filesystem->isFile("{$battle}/{$i}")) {
                 $passed = false;
             } else {
-                $size = filesize("{$path}/{$entry}/{$index}/{$i}");
+                $size = $filesystem->size("{$battle}/{$i}");
 
                 if (false === $size || 0 === $size) {
                     $passed = false;
@@ -54,15 +30,8 @@ foreach (files($path) as $entry) {
             }
 
             if (! $passed) {
-                if (isset($argv[2])) {
-                    shell_exec("php battle.php {$server} {$index} {$index}");
-
-                    break;
-                } else {
-                    echo "Fail: {$index} - {$i}".PHP_EOL;
-                }
+                $climate->to('error')->red("Fail: {$battle}/{$i}");
             }
-
         }
     }
 }
