@@ -1,7 +1,9 @@
 {
-    "require": {
-        "guzzlehttp/guzzle": "^6.2",
-        "illuminate/filesystem": "^5.3",
-        "league/climate": "^3.2"
-    }
+  "require": {
+    "guzzlehttp/guzzle": "^6.2",
+    "illuminate/filesystem": "^5.3",
+    "league/climate": "^3.2",
+    "nesbot/carbon": "^1.21",
+    "sunra/php-simple-html-dom-parser": "^1.5"
+  }
 }
