@@ -36,7 +36,7 @@ function history_info($html)
     }
 
     usort($info, function ($a, $b) {
-        return $a['time'] <=> $b['time'];
+        return strcmp($a['time'], $b['time']);
     });
 
     return $info;
@@ -73,7 +73,7 @@ function auction_info($html)
         $item = [
             'type' => 'special_item',
             'name' => $temp[0],
-            'period' => $temp[1] ?? null,
+            'period' => isset($temp[1]) ? $temp[1] : null,
         ];
     }
 
