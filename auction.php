@@ -104,20 +104,26 @@ download:
         $promises = [];
 
         for ($i = $index; $i < $index + 5; ++$i) {
-            $promises[$i] = $client->getAsync("https://{$server}.e-sim.org/auction.html?id={$i}");
+            $promises[] = $client
+                ->getAsync("https://{$server}.e-sim.org/auction.html?id={$i}")
+                ->then(function (GuzzleHttp\Psr7\Response $response) use ($server, $i) {
+                    $outputPath = __DIR__."/{$server}/auctions/".floor($i / 10000)."/";
+
+                    if (! is_dir($outputPath)) {
+                        mkdir($outputPath, 0777, true);
+                    }
+
+                    file_put_contents($outputPath.$i.'.json', auction_info($response->getBody()->getContents()), LOCK_EX);
+                }, function (GuzzleHttp\Exception\ServerException $e) {
+                    if (! $e->hasResponse() ||
+                        false === stripos($e->getResponse()->getBody()->getContents(), 'No such auction')
+                    ) {
+                        throw new Exception($e->getMessage());
+                    }
+                });
         }
 
-        $results = GuzzleHttp\Promise\unwrap($promises);
-
-        foreach ($results as $key => $result) {
-            $outputPath = __DIR__."/{$server}/auctions/".floor($key / 10000)."/";
-
-            if (! is_dir($outputPath)) {
-                mkdir($outputPath, 0777, true);
-            }
-
-            file_put_contents($outputPath.$key.'.json', auction_info($result->getBody()->getContents()), LOCK_EX);
-        }
+        GuzzleHttp\Promise\settle($promises)->wait();
     } catch (\Exception $e) {
         $climate->to('error')->red($e->getMessage());
 
@@ -127,7 +133,7 @@ download:
             exit(1);
         }
 
-        sleep(5);
+        sleep(5 + $tries ^ 2);
 
         $climate->yellow("Refetching {$server} {$index}...");
 
